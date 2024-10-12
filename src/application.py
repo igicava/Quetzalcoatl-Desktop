@@ -2,7 +2,8 @@ import sys
 import os
 import requests
 import json
-import msg_service
+import websocket
+import threading
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 SERVER="http://127.0.0.1:8888"
@@ -44,6 +45,7 @@ class MainApp():
         self.Carray = []
         self.data = data
         self.username = us
+        self.cnt = ""
 
         if data["messages"] != None:
             for i in data["messages"]:
@@ -80,8 +82,15 @@ class MainApp():
         r = requests.post(f"{SERVER}/getmsg", json=q)
         if r.status_code == 200:
             print("Congratulations!!!")
+            service.send_message(q)
         else:
             print("error get msg")
+
+    def AppendMessage(self, msg):
+        if msg["sender"] == self.cnt or (msg["sender"] == self.username and msg["receiver"] == self.cnt):
+            self.Chat.append(msg["text"])
+        self.data["messages"].append(msg)
+        print(self.data)
 
 # Window for register or login
 class LoginRegisterWindow():
@@ -254,14 +263,50 @@ class LoginRegisterWindow():
         else:
             QtWidgets.QMessageBox.information(self, "Авторизация не удалась! Проверьте введённые данные!")
 
+class ChatService():
+    def __init__(self):
+        self.ws = websocket.WebSocketApp("ws://localhost:8888/ws")
+        self.ws.on_open = self.on_open
+        self.ws.on_message = self.on_message
+        self.ws.on_error = self.on_error
+        self.ws.on_close = self.on_close
+
+    def on_open(self, ws):
+        print("WebSocket connection opened")
+
+    def on_message(self, ws, message):
+        print("Getting message", message)
+        msg = json.loads(message)
+        mp.AppendMessage(msg)
+
+    def on_error(self, ws, error):
+        print("WebSocket error:", error)
+
+    def on_close(self, ws, close_status_code, close_msg):
+        print("WebSocket connection closed")
+
+    def send_message(self, q):
+        message = q
+        if message:
+            self.ws.send(json.dumps(message))
+            mp.TextMsg.clear()
+
+def Run():
+    global service
+    service = ChatService()
+    service.ws.run_forever()
+
 # start app
 if __name__ == "__main__":
-    msg_service.Run()
-    print("Server is run on port 8888")
     app = QtWidgets.QApplication(sys.argv)
     global mp
     mp = MainApp()
     print("Client app is start")
+
+    thread = threading.Thread(target=Run)
+    thread.start()
+    print("Websocket start")
+
     try: 
         with open("config.json", "r") as file:
             i = file.read()
