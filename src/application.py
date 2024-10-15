@@ -7,6 +7,7 @@ import threading
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 SERVER="http://127.0.0.1:8888"
+global_username=""
 
 # Main Window
 class MainApp():
@@ -259,13 +260,20 @@ class LoginRegisterWindow():
                 q = json.dumps(q)
                 file.write(q)
                 self.window.close()
+
+                global_username = username
+
+                thread = threading.Thread(target=RunWS)
+                thread.start()
+                print("Websocket start")
+
                 mp.Run(r.json(), username)
         else:
             QtWidgets.QMessageBox.information(self, "Авторизация не удалась! Проверьте введённые данные!")
 
 class ChatService():
-    def __init__(self):
-        self.ws = websocket.WebSocketApp("ws://localhost:8888/ws")
+    def __init__(self, username):
+        self.ws = websocket.WebSocketApp(f"ws://localhost:8888/ws?id={username}")
         self.ws.on_open = self.on_open
         self.ws.on_message = self.on_message
         self.ws.on_error = self.on_error
@@ -291,9 +299,9 @@ class ChatService():
             self.ws.send(json.dumps(message))
             mp.TextMsg.clear()
 
-def Run():
+def RunWS():
     global service
-    service = ChatService()
+    service = ChatService(global_username)
     service.ws.run_forever()
 
 # start app
@@ -302,10 +310,6 @@ if __name__ == "__main__":
     global mp
     mp = MainApp()
     print("Client app is start")
-
-    thread = threading.Thread(target=Run)
-    thread.start()
-    print("Websocket start")
 
     try: 
         with open("config.json", "r") as file:
@@ -318,7 +322,15 @@ if __name__ == "__main__":
             print("OK")
         else:
             print("Error get messages from server")
+
+        global_username = data["username"]
+
+        thread = threading.Thread(target=RunWS)
+        thread.start()
+        print("Websocket start")
+
         mp.Run(r.json(), data["username"])
+
     except FileNotFoundError:
         regForm = LoginRegisterWindow()
         regForm.Run()
