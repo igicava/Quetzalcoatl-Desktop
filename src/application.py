@@ -8,8 +8,9 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 
 SERVER="http://127.0.0.1:8888"
 global_username=""
+security_token=""
 
-# Main Window
+# Главное окно
 class MainApp():
     def __init__(self):
         self.Window = QtWidgets.QWidget()
@@ -75,10 +76,14 @@ class MainApp():
                 self.Chat.append(i["text"])
     
     def SendMessage(self):
+        with open("token.txt", "r") as file:
+            token = file.read()
+
         q = {
             "receiver": self.cnt,
             "sender": self.username,
             "text": self.TextMsg.toPlainText(),
+            "token": token,
         }
         r = requests.post(f"{SERVER}/getmsg", json=q)
         if r.status_code == 200:
@@ -93,7 +98,7 @@ class MainApp():
         self.data["messages"].append(msg)
         print(self.data)
 
-# Window for register or login
+# Окно для регистрации и входа
 class LoginRegisterWindow():
     def __init__(self):
         self.window = QtWidgets.QWidget()
@@ -150,15 +155,15 @@ class LoginRegisterWindow():
 
         self.window.setLayout(self.boss)
 
-    # start window
+    # Запуск
     def Run(self):
         self.window.show()
 
-    # stop work window
+    # Приостановка
     def Stop(self):
         self.window.hide()
 
-    # set login form on window
+    # Смена на форму фхода
     def SetLogin(self):
         self.window.setWindowTitle("Login")
 
@@ -199,7 +204,7 @@ class LoginRegisterWindow():
         self.SetRegisterBTN.clicked.connect(self.SetRegister)
         self.EnterLogin.clicked.connect(self.Log)
 
-    # set register form on window
+    # Смена на форму регистрации
     def SetRegister(self):
         self.LoginUsername.hide()
         self.LoginUsernameEdit.hide()
@@ -225,7 +230,7 @@ class LoginRegisterWindow():
         self.Login.show()
         self.Enter.show()
 
-    # registration request
+    # Запрос на регистрацию
     def Reg(self):
         data = {
             "first_name": self.FirstNameEdit.text(),
@@ -238,18 +243,25 @@ class LoginRegisterWindow():
         r = requests.post(f"{SERVER}/reg", json=data)
 
         if r.status_code == 200:
-            QtWidgets.QMessageBox.information("Вы зарегестрированы! Войдите в аккаунт")
+            QtWidgets.QMessageBox.information(None, "Успешно!", "Вы зарегестрировались! Закройте это окно и войдите в аккаунт.")
             self.SetLogin()
         else:
-            QtWidgets.QMessageBox.information(self, "Регистрация не удалась! Проверьте введённые данные!")
+            QtWidgets.QMessageBox.warning(None, "Ошибка", "Ошибка регистрации, проверьте введенные данные")
     
-    # login request
+    # Запрос авторизации получения токена
     def Log(self):
         data = {
             "username": self.LoginUsernameEdit.text(),
             "password": self.LoginPasswordEdit.text(),
         }
-        r = requests.post(f"{SERVER}/msgs", json=data)
+        
+        r = requests.get(f"{SERVER}/login", json=data)
+
+        R_tocken = r.json()
+        security_token = R_tocken["token"]
+        print(security_token)
+
+        r = requests.get(f"{SERVER}/msgs", json=R_tocken)
         if r.status_code == 200:
             with open("config.json", "w+") as file:
                 q = {
@@ -261,19 +273,26 @@ class LoginRegisterWindow():
                 file.write(q)
                 self.window.close()
 
-                global_username = username
+            global_username = username
 
-                thread = threading.Thread(target=RunWS)
-                thread.start()
-                print("Websocket start")
+            with open("token.txt", "w+") as file:
+                file.write(R_tocken["token"])
 
-                mp.Run(r.json(), username)
+            thread = threading.Thread(target=RunWS)
+            thread.start()
+            print("Websocket start")
+
+            mp.Run(r.json(), username)
         else:
-            QtWidgets.QMessageBox.information(self, "Авторизация не удалась! Проверьте введённые данные!")
+            QtWidgets.QMessageBox.warning(None, "Ошибка", "Ошибка входа в аккаунт, проверьте введенные данные")
 
+# Служба сообщений на WebSocket
 class ChatService():
     def __init__(self, username):
-        self.ws = websocket.WebSocketApp(f"ws://localhost:8888/ws?id={username}")
+        with open("token.txt", "r") as file:
+            tokenF = file.read()
+
+        self.ws = websocket.WebSocketApp(f"ws://localhost:8888/ws?id={username}&token={tokenF}")
         self.ws.on_open = self.on_open
         self.ws.on_message = self.on_message
         self.ws.on_error = self.on_error
@@ -304,11 +323,13 @@ def RunWS():
     service = ChatService(global_username)
     service.ws.run_forever()
 
-# start app
+# Запуск приложения
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
+
     global mp
     mp = MainApp()
+
     print("Client app is start")
 
     try: 
@@ -316,14 +337,25 @@ if __name__ == "__main__":
             i = file.read()
             print(i)
         data = json.loads(i)
-        r = requests.post(f"{SERVER}/msgs", json=data)
+
+        r = requests.get(f"{SERVER}/login", json=data)
+
+        R_tocken = r.json()
+        security_token = R_tocken["token"]
+        print(security_token)
+
+        r = requests.get(f"{SERVER}/msgs", json=R_tocken)
         print(r.json())
+
         if r.status_code == 200:
             print("OK")
         else:
             print("Error get messages from server")
 
         global_username = data["username"]
+
+        with open("token.txt", "w+") as file:
+            file.write(R_tocken["token"])
 
         thread = threading.Thread(target=RunWS)
         thread.start()
