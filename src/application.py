@@ -6,7 +6,7 @@ import websocket
 import threading
 from PyQt5 import QtCore, QtWidgets, QtGui
 
-SERVER="http://127.0.0.1:8888"
+SERVER="http://45.66.228.76:8888"
 global_username=""
 security_token=""
 
@@ -292,7 +292,7 @@ class ChatService():
         with open("token.txt", "r") as file:
             tokenF = file.read()
 
-        self.ws = websocket.WebSocketApp(f"ws://localhost:8888/ws?id={username}&token={tokenF}")
+        self.ws = websocket.WebSocketApp(f"ws://45.66.228.76:8888/ws?id={username}&token={tokenF}")
         self.ws.on_open = self.on_open
         self.ws.on_message = self.on_message
         self.ws.on_error = self.on_error
