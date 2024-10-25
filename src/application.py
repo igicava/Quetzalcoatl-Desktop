@@ -13,34 +13,74 @@ security_token=""
 # Главное окно
 class MainApp():
     def __init__(self):
-        self.Window = QtWidgets.QWidget()
+        self.Window = QtWidgets.QMainWindow()
         self.Window.setWindowTitle("Quetzalcoatl")
 
+        central_widget = QtWidgets.QWidget()
+        self.Window.setCentralWidget(central_widget)
+
         self.TextMsg = QtWidgets.QTextEdit()
-        self.PushMsg = QtWidgets.QPushButton("Отправить сообщение")
+        self.TextMsg.setFont(QtGui.QFont("Arial", 12))
+
+        self.PushMsg = QtWidgets.QPushButton(">")
         self.PushMsg.setFont(QtGui.QFont("Arial", 14))
 
         self.Chat = QtWidgets.QTextBrowser()
+        self.Chat.setFont(QtGui.QFont("Arial", 14))
+
         self.ListContact = QtWidgets.QListWidget()
+        self.ListContact.setFont(QtGui.QFont("Arial", 11))
+
+        self.menubar = QtWidgets.QMenuBar()
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 218, 26))
+        self.menubar.setObjectName("menubar")
+        self.menu = QtWidgets.QMenu(self.menubar)
+        self.menu.setObjectName("menu")
+        self.menu_2 = QtWidgets.QMenu(self.menubar)
+        self.menu_2.setObjectName("menu_2")
+        self.Window.setMenuBar(self.menubar)
+        self.statusbar = QtWidgets.QStatusBar()
+        self.statusbar.setObjectName("statusbar")
+        self.Window.setStatusBar(self.statusbar)
+        self.action = QtWidgets.QAction()
+        self.action.setObjectName("action")
+        self.action_2 = QtWidgets.QAction()
+        self.action_2.setObjectName("action_2")
+        self.menu.addAction(self.action)
+        self.menu.addAction(self.action_2)
+        self.menubar.addAction(self.menu.menuAction())
+        self.menubar.addAction(self.menu_2.menuAction())
+
+        self.retranslateUi(self.Window)
+        QtCore.QMetaObject.connectSlotsByName(self.Window)
 
         bl = QtWidgets.QHBoxLayout()
 
-        InputLayout = QtWidgets.QVBoxLayout()
-        OutputLayout = QtWidgets.QVBoxLayout()
+        ChatAndSendLayout = QtWidgets.QVBoxLayout()
         ContactsLayout = QtWidgets.QVBoxLayout()
+        MSGLayout = QtWidgets.QHBoxLayout()
 
-        InputLayout.addWidget(self.TextMsg)
-        InputLayout.addWidget(self.PushMsg)
+        ContactsLayout.addWidget(self.ListContact, alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
 
-        OutputLayout.addWidget(self.Chat)
+        ChatAndSendLayout.addWidget(self.Chat)
+        MSGLayout.addWidget(self.TextMsg, alignment=QtCore.Qt.AlignmentFlag.AlignTop)
+        MSGLayout.addWidget(self.PushMsg)
 
-        ContactsLayout.addWidget(self.ListContact)
-
-        bl.addLayout(InputLayout)
-        bl.addLayout(OutputLayout)
+        ChatAndSendLayout.addLayout(MSGLayout)
         bl.addLayout(ContactsLayout)
+        bl.addLayout(ChatAndSendLayout)
 
-        self.Window.setLayout(bl)
+        central_widget.setLayout(bl)
+
+        self.Window.resize(1080, 560)
+
+    def retranslateUi(self, MainWindow):
+        _translate = QtCore.QCoreApplication.translate
+        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.menu.setTitle(_translate("MainWindow", "Аккаунт"))
+        self.menu_2.setTitle(_translate("MainWindow", "Справка"))
+        self.action.setText(_translate("MainWindow", "Добавить контакт"))
+        self.action_2.setText(_translate("MainWindow", "Выйти"))
     
     def Run(self, data, us):
         self.Window.show()
@@ -55,14 +95,18 @@ class MainApp():
                 if i["sender"] in self.Carray or i["sender"] == us:
                     continue
                 else:
+                    item = QtWidgets.QListWidgetItem(i["sender"])  
+                    item.setIcon(QtGui.QIcon("style/user.svg"))
+                    self.ListContact.addItem(item)
                     self.Carray.append(i["sender"])
-                    self.ListContact.addItem(i["sender"])
 
                 if i["receiver"] in self.Carray or i["receiver"] == us:
                     continue
                 else:
+                    item = QtWidgets.QListWidgetItem(i["receiver"])
+                    item.setIcon(QtGui.QIcon("style/user.svg"))
+                    self.ListContact.addItem(item)
                     self.Carray.append(i["receiver"])
-                    self.ListContact.addItem(i["receiver"])
 
         self.ListContact.itemClicked.connect(self.clickContactInList)
         self.PushMsg.clicked.connect(self.SendMessage)
@@ -73,7 +117,16 @@ class MainApp():
         self.Chat.clear()
         for i in self.data["messages"]:
             if i["sender"] == self.cnt or i["receiver"] == self.cnt:
-                self.Chat.append(i["text"])
+                if i["sender"] == self.cnt:
+                    self.Chat.append(f'<div><p style="color:red;font-size:11;">{i["sender"]}</p>\n{i["text"]}<br></div>')
+                    QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
+                else:
+                    self.Chat.append(f'<div><p style="color:blue;font-size:11;">{i["sender"]}</p>\n{i["text"]}<br></div>')
+                    QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
+    
+    def scroll_to_bottom(self):
+        # Прокручиваем вниз
+        self.Chat.verticalScrollBar().setValue(self.Chat.verticalScrollBar().maximum())
     
     def SendMessage(self):
         with open("token.txt", "r") as file:
@@ -94,7 +147,12 @@ class MainApp():
 
     def AppendMessage(self, msg):
         if msg["sender"] == self.cnt or (msg["sender"] == self.username and msg["receiver"] == self.cnt):
-            self.Chat.append(msg["text"])
+            if msg["sender"] == self.cnt:
+                self.Chat.append(f'<div><p style="color:red;font-size:11;">{msg["sender"]}</p>\n{msg["text"]}<br></div>')
+                QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
+            else:
+                self.Chat.append(f'<div><p style="color:blue;font-size:11;">{msg["sender"]}</p>\n{msg["text"]}<br></div>')
+                QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
         self.data["messages"].append(msg)
         print(self.data)
 
@@ -201,6 +259,8 @@ class LoginRegisterWindow():
         self.bl.addWidget(self.SetRegisterBTN)
         self.bl.addWidget(self.EnterLogin)
 
+        self.window.adjustSize()
+
         self.SetRegisterBTN.clicked.connect(self.SetRegister)
         self.EnterLogin.clicked.connect(self.Log)
 
@@ -229,6 +289,8 @@ class LoginRegisterWindow():
         self.Password2Edit.show()
         self.Login.show()
         self.Enter.show()
+
+        self.window.adjustSize()
 
     # Запрос на регистрацию
     def Reg(self):
