@@ -14,13 +14,15 @@ security_token=""
 class MainApp():
     def __init__(self):
         self.Window = QtWidgets.QMainWindow()
-        self.Window.setWindowTitle("Quetzalcoatl")
 
         central_widget = QtWidgets.QWidget()
         self.Window.setCentralWidget(central_widget)
 
         self.TextMsg = QtWidgets.QTextEdit()
         self.TextMsg.setFont(QtGui.QFont("Arial", 12))
+
+        self.PleaseSelectContact = QtWidgets.QLabel("Выбирай контакт с боку или добавляй новый!")
+        self.PleaseSelectContact.setFont(QtGui.QFont("Arial", 12))
 
         self.PushMsg = QtWidgets.QPushButton(">")
         self.PushMsg.setFont(QtGui.QFont("Arial", 14))
@@ -29,7 +31,7 @@ class MainApp():
         self.Chat.setFont(QtGui.QFont("Arial", 14))
 
         self.ListContact = QtWidgets.QListWidget()
-        self.ListContact.setFont(QtGui.QFont("Arial", 11))
+        self.ListContact.setFont(QtGui.QFont("Arial", 14))
 
         self.menubar = QtWidgets.QMenuBar()
         self.menubar.setGeometry(QtCore.QRect(0, 0, 218, 26))
@@ -51,7 +53,7 @@ class MainApp():
         self.menubar.addAction(self.menu.menuAction())
         self.menubar.addAction(self.menu_2.menuAction())
 
-        self.retranslateUi(self.Window)
+        self.retranslateUi()
         QtCore.QMetaObject.connectSlotsByName(self.Window)
 
         bl = QtWidgets.QHBoxLayout()
@@ -62,51 +64,50 @@ class MainApp():
 
         ContactsLayout.addWidget(self.ListContact, alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
 
+        ChatAndSendLayout.addWidget(self.PleaseSelectContact, alignment=QtCore.Qt.AlignmentFlag.AlignVCenter)
         ChatAndSendLayout.addWidget(self.Chat)
         MSGLayout.addWidget(self.TextMsg, alignment=QtCore.Qt.AlignmentFlag.AlignTop)
         MSGLayout.addWidget(self.PushMsg)
+        self.Chat.hide()
+        self.TextMsg.hide()
+        self.PushMsg.hide()
 
         ChatAndSendLayout.addLayout(MSGLayout)
         bl.addLayout(ContactsLayout)
         bl.addLayout(ChatAndSendLayout)
 
+        self.action.triggered.connect(self.AddContact)
+        self.Window.addAction(self.action)
+
         central_widget.setLayout(bl)
 
         self.Window.resize(1080, 560)
 
-    def retranslateUi(self, MainWindow):
+    def retranslateUi(self):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.menu.setTitle(_translate("MainWindow", "Аккаунт"))
         self.menu_2.setTitle(_translate("MainWindow", "Справка"))
         self.action.setText(_translate("MainWindow", "Добавить контакт"))
         self.action_2.setText(_translate("MainWindow", "Выйти"))
+
+    def AddContact(self):
+        ac = ContactAddWindow()
+        ac.exec_()
     
     def Run(self, data, us):
         self.Window.show()
-        self.Carray = []
         self.data = data
         self.username = us
         self.cnt = ""
 
-        if data["messages"] != None:
-            for i in data["messages"]:
+        _translate = QtCore.QCoreApplication.translate
+        self.Window.setWindowTitle(_translate("MainWindow", f"Quetzalcoatl - {self.username}"))
 
-                if i["sender"] in self.Carray or i["sender"] == us:
-                    continue
-                else:
-                    item = QtWidgets.QListWidgetItem(i["sender"])  
-                    item.setIcon(QtGui.QIcon("style/user.svg"))
-                    self.ListContact.addItem(item)
-                    self.Carray.append(i["sender"])
-
-                if i["receiver"] in self.Carray or i["receiver"] == us:
-                    continue
-                else:
-                    item = QtWidgets.QListWidgetItem(i["receiver"])
-                    item.setIcon(QtGui.QIcon("style/user.svg"))
-                    self.ListContact.addItem(item)
-                    self.Carray.append(i["receiver"])
+        if data["contacts"] != None:
+            for i in data["contacts"]:
+                item = QtWidgets.QListWidgetItem(i["contact"])  
+                item.setIcon(QtGui.QIcon("style/user.svg"))
+                self.ListContact.addItem(item)
 
         self.ListContact.itemClicked.connect(self.clickContactInList)
         self.PushMsg.clicked.connect(self.SendMessage)
@@ -115,14 +116,19 @@ class MainApp():
     def clickContactInList(self, item):
         self.cnt = item.text()
         self.Chat.clear()
-        for i in self.data["messages"]:
-            if i["sender"] == self.cnt or i["receiver"] == self.cnt:
-                if i["sender"] == self.cnt:
-                    self.Chat.append(f'<div><p style="color:red;font-size:11;">{i["sender"]}</p>\n{i["text"]}<br></div>')
-                    QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
-                else:
-                    self.Chat.append(f'<div><p style="color:blue;font-size:11;">{i["sender"]}</p>\n{i["text"]}<br></div>')
-                    QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
+        self.PleaseSelectContact.hide()
+        self.Chat.show()
+        self.TextMsg.show()
+        self.PushMsg.show()
+        if self.data["messages"] != None:
+            for i in self.data["messages"]:
+                if i["sender"] == self.cnt or i["receiver"] == self.cnt:
+                    if i["sender"] == self.cnt:
+                        self.Chat.append(f'<div><p style="color:red;font-size:11;">{i["sender"]}</p>\n{i["text"]}<br></div>')
+                        QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
+                    else:
+                        self.Chat.append(f'<div><p style="color:blue;font-size:11;">{i["sender"]}</p>\n{i["text"]}<br></div>')
+                        QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
     
     def scroll_to_bottom(self):
         # Прокручиваем вниз
@@ -153,8 +159,28 @@ class MainApp():
             else:
                 self.Chat.append(f'<div><p style="color:blue;font-size:11;">{msg["sender"]}</p>\n{msg["text"]}<br></div>')
                 QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
+
+        if self.data["contacts"] == None:
+            self.data["contacts"] = []
+        if {"name":self.username, "contact":msg["sender"]} in self.data["contacts"] or msg["sender"] == self.username:
+            pass
+        else:
+            self.data["contacts"].append({"name":self.username, "contact":msg["sender"]})
+
+        if self.data["messages"] == None:
+            self.data["messages"] = []
         self.data["messages"].append(msg)
+
+        self.updateContactList()
         print(self.data)
+
+    def updateContactList(self):
+        self.ListContact.clear()
+        if self.data["contacts"] != None:
+            for i in self.data["contacts"]:
+                item = QtWidgets.QListWidgetItem(i["contact"])  
+                item.setIcon(QtGui.QIcon("style/user.svg"))
+                self.ListContact.addItem(item)
 
 # Окно для регистрации и входа
 class LoginRegisterWindow():
@@ -318,6 +344,9 @@ class LoginRegisterWindow():
         }
         
         r = requests.get(f"{SERVER}/login", json=data)
+        if r.status_code != 200:
+            QtWidgets.QMessageBox.warning(None, "Ошибка", "Ошибка входа в аккаунт, проверьте введенные данные")
+            return
 
         R_tocken = r.json()
         security_token = R_tocken["token"]
@@ -347,6 +376,53 @@ class LoginRegisterWindow():
             mp.Run(r.json(), username)
         else:
             QtWidgets.QMessageBox.warning(None, "Ошибка", "Ошибка входа в аккаунт, проверьте введенные данные")
+
+# Добавление контакта
+class ContactAddWindow(QtWidgets.QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Добавление контакта")
+
+        self.Label = QtWidgets.QLabel("Введите ник пользователя")
+        self.Label.setFont(QtGui.QFont("Arial", 12))
+
+        self.US = QtWidgets.QLineEdit()
+        self.US.setFont(QtGui.QFont("Arial", 12))
+
+        self.Send = QtWidgets.QPushButton("Отправить")
+        self.Send.setFont(QtGui.QFont("Arial", 12))
+
+        self.l = QtWidgets.QVBoxLayout()
+        self.l.addWidget(self.Label)
+        self.l.addWidget(self.US)
+        self.l.addWidget(self.Send)
+
+        self.setLayout(self.l)
+
+        self.Send.clicked.connect(self.ReqAddContact)
+
+    def ReqAddContact(self):
+        with open("token.txt", "r") as file:
+            token = file.read()
+
+        q = {
+            "option": self.US.text(),
+            "token": token,
+        }
+
+        r = requests.post(f"{SERVER}/addcontact", json=q)
+        if r.status_code == 200:
+            print("Congratulations!!!")
+            if mp.data["contacts"] == None:
+                mp.data["contacts"] = []
+            mp.data["contacts"].append({"name":mp.username, "contact":q["option"]})
+            mp.updateContactList()
+            self.hide()
+            QtWidgets.QMessageBox.information(None, "Успешно", "Контакт добавлен")
+        else:
+            print("error add contact")
+            QtWidgets.QMessageBox.warning(None, "Ошибка", "Контакт не добавлен добавлен")
+
 
 # Служба сообщений на WebSocket
 class ChatService():
