@@ -421,7 +421,7 @@ class ContactAddWindow(QtWidgets.QDialog):
             QtWidgets.QMessageBox.information(None, "Успешно", "Контакт добавлен")
         else:
             print("error add contact")
-            QtWidgets.QMessageBox.warning(None, "Ошибка", "Контакт не добавлен добавлен")
+            QtWidgets.QMessageBox.warning(None, "Ошибка", "Контакт не добавлен")
 
 
 # Служба сообщений на WebSocket
