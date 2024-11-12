@@ -6,7 +6,6 @@ import websocket
 import threading
 from PyQt5 import QtCore, QtWidgets, QtGui
 
-SERVER="http://45.66.228.76:8888"
 global_username=""
 security_token=""
 
@@ -14,6 +13,11 @@ security_token=""
 class MainApp():
     def __init__(self):
         self.Window = QtWidgets.QMainWindow()
+
+        with open("style/style", "r") as s:
+            style = s.read()
+
+        self.Window.setStyleSheet(style)
 
         central_widget = QtWidgets.QWidget()
         self.Window.setCentralWidget(central_widget)
@@ -24,7 +28,7 @@ class MainApp():
         self.PleaseSelectContact = QtWidgets.QLabel("Выбирай контакт с боку или добавляй новый!")
         self.PleaseSelectContact.setFont(QtGui.QFont("Arial", 12))
 
-        self.PushMsg = QtWidgets.QPushButton(">")
+        self.PushMsg = QtWidgets.QPushButton("\n>\n")
         self.PushMsg.setFont(QtGui.QFont("Arial", 14))
 
         self.Chat = QtWidgets.QTextBrowser()
@@ -138,18 +142,19 @@ class MainApp():
         with open("token.txt", "r") as file:
             token = file.read()
 
-        q = {
-            "receiver": self.cnt,
-            "sender": self.username,
-            "text": self.TextMsg.toPlainText(),
-            "token": token,
-        }
-        r = requests.post(f"{SERVER}/getmsg", json=q)
-        if r.status_code == 200:
-            print("Congratulations!!!")
-            service.send_message(q)
-        else:
-            print("error get msg")
+        if len(self.TextMsg.toPlainText().strip()) > 0:
+            q = {
+                "receiver": self.cnt,
+                "sender": self.username,
+                "text": self.TextMsg.toPlainText(),
+                "token": token,
+            }
+            r = requests.post(f"{SERVER}/getmsg", json=q)
+            if r.status_code == 200:
+                print("Congratulations!!!")
+                service.send_message(q)
+            else:
+                print("error get msg")
 
     def AppendMessage(self, msg):
         if msg["sender"] == self.cnt or (msg["sender"] == self.username and msg["receiver"] == self.cnt):
@@ -430,7 +435,7 @@ class ChatService():
         with open("token.txt", "r") as file:
             tokenF = file.read()
 
-        self.ws = websocket.WebSocketApp(f"ws://45.66.228.76:8888/ws?id={username}&token={tokenF}")
+        self.ws = websocket.WebSocketApp(f"{WS_SERVER}/ws?id={username}&token={tokenF}")
         self.ws.on_open = self.on_open
         self.ws.on_message = self.on_message
         self.ws.on_error = self.on_error
@@ -463,6 +468,13 @@ def RunWS():
 
 # Запуск приложения
 if __name__ == "__main__":
+    with open("server_config.json", "r") as file:
+        cng = json.loads(file.read())
+        IP=cng["ip"]
+        PORT=cng["port"]
+        SERVER=f"http://{IP}:{PORT}"
+        WS_SERVER=f"ws://{IP}:{PORT}"
+
     app = QtWidgets.QApplication(sys.argv)
 
     global mp

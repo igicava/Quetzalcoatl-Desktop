@@ -1,0 +1,33 @@
+QMainWindow {
+    background-color: #2E2E2E; /* Цвет фона окна */
+}
+QPushButton {
+    background-color: #4A4A4A; /* Цвет фона кнопки */
+    color: white; /* Цвет текста кнопки */
+    border: none; /* Убираем рамку */
+    padding: 10px; /* Отступы внутри кнопки */
+    text-decoration: white;
+}
+QPushButton:hover {
+    background-color: #5A5A5A; /* Цвет фона кнопки при наведении */
+}
+QLabel {
+    color: white;
+}
+QMenuBar {
+    background-color: #828282;
+}
+QTextEdit {
+    background-color: #828282;
+    border: none;
+}
+QTextBrowser {
+    background-color: #828282;
+    border: none;
+}
+QListWidget {
+    background-color: #828282;
+    border: none;
+}
+                    
+            
