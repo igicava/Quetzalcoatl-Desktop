@@ -4,25 +4,29 @@ import requests
 import json
 import websocket
 import threading
+import plyer
 from PyQt5 import QtCore, QtWidgets, QtGui
 
 global_username=""
 security_token=""
 
 # Главное окно
-class MainApp():
+class MainApp(QtWidgets.QMainWindow):
     def __init__(self):
-        self.Window = QtWidgets.QMainWindow()
-
+        super().__init__()
         with open("style/style", "r") as s:
             style = s.read()
 
-        self.Window.setStyleSheet(style)
+        self.lastmsg_by = {}
+
+        self.setStyleSheet(style)
+        self.setWindowIcon(QtGui.QIcon("style/Quetzalcoatl.svg"))
 
         central_widget = QtWidgets.QWidget()
-        self.Window.setCentralWidget(central_widget)
+        self.setCentralWidget(central_widget)
 
-        self.TextMsg = QtWidgets.QTextEdit()
+        self.TextMsg = NewKeysTextEdit()
+        # keyboard.on_press_key('enter', self.SendMessage)
         self.TextMsg.setFont(QtGui.QFont("Arial", 12))
 
         self.PleaseSelectContact = QtWidgets.QLabel("Выбирай контакт с боку или добавляй новый!")
@@ -31,8 +35,10 @@ class MainApp():
         self.PushMsg = QtWidgets.QPushButton("\n>\n")
         self.PushMsg.setFont(QtGui.QFont("Arial", 14))
 
-        self.Chat = QtWidgets.QTextBrowser()
+        self.Chat = QtWidgets.QTextEdit()
+        self.Chat.setReadOnly(True)
         self.Chat.setFont(QtGui.QFont("Arial", 14))
+        self.Chat.textChanged.connect(self.scroll_to_bottom)
 
         self.ListContact = QtWidgets.QListWidget()
         self.ListContact.setFont(QtGui.QFont("Arial", 14))
@@ -44,10 +50,10 @@ class MainApp():
         self.menu.setObjectName("menu")
         self.menu_2 = QtWidgets.QMenu(self.menubar)
         self.menu_2.setObjectName("menu_2")
-        self.Window.setMenuBar(self.menubar)
+        self.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar()
         self.statusbar.setObjectName("statusbar")
-        self.Window.setStatusBar(self.statusbar)
+        self.setStatusBar(self.statusbar)
         self.action = QtWidgets.QAction()
         self.action.setObjectName("action")
         self.action_2 = QtWidgets.QAction()
@@ -58,7 +64,7 @@ class MainApp():
         self.menubar.addAction(self.menu_2.menuAction())
 
         self.retranslateUi()
-        QtCore.QMetaObject.connectSlotsByName(self.Window)
+        QtCore.QMetaObject.connectSlotsByName(self)
 
         bl = QtWidgets.QHBoxLayout()
 
@@ -81,11 +87,11 @@ class MainApp():
         bl.addLayout(ChatAndSendLayout)
 
         self.action.triggered.connect(self.AddContact)
-        self.Window.addAction(self.action)
+        self.addAction(self.action)
 
         central_widget.setLayout(bl)
 
-        self.Window.resize(1080, 560)
+        self.resize(1080, 560)
 
     def retranslateUi(self):
         _translate = QtCore.QCoreApplication.translate
@@ -99,13 +105,13 @@ class MainApp():
         ac.exec_()
     
     def Run(self, data, us):
-        self.Window.show()
+        self.show()
         self.data = data
         self.username = us
         self.cnt = ""
 
         _translate = QtCore.QCoreApplication.translate
-        self.Window.setWindowTitle(_translate("MainWindow", f"Quetzalcoatl - {self.username}"))
+        self.setWindowTitle(_translate("MainWindow", f"Quetzalcoatl - {self.username}"))
 
         if data["contacts"] != None:
             for i in data["contacts"]:
@@ -133,10 +139,13 @@ class MainApp():
                     else:
                         self.Chat.append(f'<div><p style="color:blue;font-size:11;">{i["sender"]}</p>\n{i["text"]}<br></div>')
                         QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
-    
-    def scroll_to_bottom(self):
+
+    def scroll_to_bottom(self, opt=None):
         # Прокручиваем вниз
-        self.Chat.verticalScrollBar().setValue(self.Chat.verticalScrollBar().maximum())
+        if opt != "u":
+            self.Chat.verticalScrollBar().setValue(self.Chat.verticalScrollBar().maximum())
+        else:
+            self.Chat.verticalScrollBar().setValue(self.Chat.verticalScrollBar().maximum())
     
     def SendMessage(self):
         with open("token.txt", "r") as file:
@@ -156,14 +165,18 @@ class MainApp():
             else:
                 print("error get msg")
 
+    def keyPressEvent(self, event):
+        key = event.key()
+        if key == QtCore.Qt.Key_Return:
+            self.SendMessage()
+
     def AppendMessage(self, msg):
+        self.lastmsg_by = msg
         if msg["sender"] == self.cnt or (msg["sender"] == self.username and msg["receiver"] == self.cnt):
             if msg["sender"] == self.cnt:
                 self.Chat.append(f'<div><p style="color:red;font-size:11;">{msg["sender"]}</p>\n{msg["text"]}<br></div>')
-                QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
             else:
                 self.Chat.append(f'<div><p style="color:blue;font-size:11;">{msg["sender"]}</p>\n{msg["text"]}<br></div>')
-                QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
 
         if self.data["contacts"] == None:
             self.data["contacts"] = []
@@ -171,21 +184,26 @@ class MainApp():
             pass
         else:
             self.data["contacts"].append({"name":self.username, "contact":msg["sender"]})
+            item = QtWidgets.QListWidgetItem(msg["sender"])  
+            item.setIcon(QtGui.QIcon("style/user.svg"))
+            self.ListContact.addItem(item)
 
         if self.data["messages"] == None:
             self.data["messages"] = []
         self.data["messages"].append(msg)
 
-        self.updateContactList()
         print(self.data)
 
-    def updateContactList(self):
-        self.ListContact.clear()
-        if self.data["contacts"] != None:
-            for i in self.data["contacts"]:
-                item = QtWidgets.QListWidgetItem(i["contact"])  
-                item.setIcon(QtGui.QIcon("style/user.svg"))
-                self.ListContact.addItem(item)
+# Модифицированный текст едит
+class NewKeysTextEdit(QtWidgets.QTextEdit):
+    def __init__(self):
+        super().__init__()
+
+    def keyPressEvent(self, e):
+        key = e.key()
+        if key == QtCore.Qt.Key_Return or key == QtCore.Qt.Key_Enter:
+            mp.SendMessage()
+        super().keyPressEvent(e)
 
 # Окно для регистрации и входа
 class LoginRegisterWindow():
@@ -421,7 +439,9 @@ class ContactAddWindow(QtWidgets.QDialog):
             if mp.data["contacts"] == None:
                 mp.data["contacts"] = []
             mp.data["contacts"].append({"name":mp.username, "contact":q["option"]})
-            mp.updateContactList()
+            item = QtWidgets.QListWidgetItem(q["option"])  
+            item.setIcon(QtGui.QIcon("style/user.svg"))
+            mp.ListContact.addItem(item)
             self.hide()
             QtWidgets.QMessageBox.information(None, "Успешно", "Контакт добавлен")
         else:
@@ -448,6 +468,11 @@ class ChatService():
         print("Getting message", message)
         msg = json.loads(message)
         mp.AppendMessage(msg)
+        if msg["sender"] != global_username and mp.cnt != msg["sender"]:
+            plyer.notification.notify( 
+                message=f'{msg["text"]}',
+                app_name='Quetzalcoatl',
+                title='Новое сообщение', )
 
     def on_error(self, ws, error):
         print("WebSocket error:", error)
@@ -470,10 +495,9 @@ def RunWS():
 if __name__ == "__main__":
     with open("server_config.json", "r") as file:
         cng = json.loads(file.read())
-        IP=cng["ip"]
-        PORT=cng["port"]
-        SERVER=f"http://{IP}:{PORT}"
-        WS_SERVER=f"ws://{IP}:{PORT}"
+        ADDR=cng["addr"]
+        SERVER=f"http://{ADDR}"
+        WS_SERVER=f"ws://{ADDR}"
 
     app = QtWidgets.QApplication(sys.argv)
 
@@ -511,6 +535,7 @@ if __name__ == "__main__":
         thread.start()
         print("Websocket start")
 
+        
         mp.Run(r.json(), data["username"])
 
     except FileNotFoundError:
