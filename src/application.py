@@ -5,7 +5,8 @@ import json
 import websocket
 import threading
 import plyer
-from PyQt5 import QtCore, QtWidgets, QtGui
+import re
+from PyQt5 import QtCore, QtWidgets, QtGui, QtWebEngineWidgets
 
 global_username=""
 security_token=""
@@ -35,10 +36,15 @@ class MainApp(QtWidgets.QMainWindow):
         self.PushMsg = QtWidgets.QPushButton("\n>\n")
         self.PushMsg.setFont(QtGui.QFont("Arial", 14))
 
-        self.Chat = QtWidgets.QTextEdit()
-        self.Chat.setReadOnly(True)
-        self.Chat.setFont(QtGui.QFont("Arial", 14))
-        self.Chat.textChanged.connect(self.scroll_to_bottom)
+        self.Chat = QtWebEngineWidgets.QWebEngineView()
+        self.Chat.loadFinished.connect(self.on_chat_load_finished)
+        self.html = '''
+        <div id="chat"></div>
+        '''
+        base_i = "let i;let div;let p;let br;let textNode"
+        self.Chat.page().runJavaScript(base_i)
+        self.Chat.setHtml(self.html)
+        # self.Chat.textChanged.connect(self.scroll_to_bottom_update)
 
         self.ListContact = QtWidgets.QListWidget()
         self.ListContact.setFont(QtGui.QFont("Arial", 14))
@@ -119,33 +125,71 @@ class MainApp(QtWidgets.QMainWindow):
                 item.setIcon(QtGui.QIcon("style/user.svg"))
                 self.ListContact.addItem(item)
 
+        self.lastmsg_by = data["messages"][(len(data["messages"])-1)]
+
         self.ListContact.itemClicked.connect(self.clickContactInList)
         self.PushMsg.clicked.connect(self.SendMessage)
         # self.Chat.setText(json.dumps(data))
 
+    def find_image_links(self, text):
+        # Регулярное выражение для поиска ссылок на изображения
+        image_pattern = r'https?://'
+        
+        # Находим все совпадения с регулярным выражением
+        image_links = re.findall(image_pattern, text, re.IGNORECASE)
+        
+        return image_links
+    
+    def append_images_msg(self, links):
+        for i in links:
+            js_code = f"""
+            i = {json.dumps(i)}
+            img = document.createElement('img');img.src = 'i';document.getElementById('chat').appendChild(img);
+            window.scrollTo(0, window.outerHeight);
+            """
+            self.Chat.page().runJavaScript(js_code)
+
     def clickContactInList(self, item):
         self.cnt = item.text()
-        self.Chat.clear()
+        self.Chat.setHtml(self.html)
         self.PleaseSelectContact.hide()
         self.Chat.show()
         self.TextMsg.show()
         self.PushMsg.show()
         if self.data["messages"] != None:
             for i in self.data["messages"]:
-                if i["sender"] == self.cnt or i["receiver"] == self.cnt:
-                    if i["sender"] == self.cnt:
-                        self.Chat.append(f'<div><p style="color:red;font-size:11;">{i["sender"]}</p>\n{i["text"]}<br></div>')
-                        QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
-                    else:
-                        self.Chat.append(f'<div><p style="color:blue;font-size:11;">{i["sender"]}</p>\n{i["text"]}<br></div>')
-                        QtCore.QTimer.singleShot(0, self.scroll_to_bottom)
+                self.appendMSG(i)
 
-    def scroll_to_bottom(self, opt=None):
-        # Прокручиваем вниз
-        if opt != "u":
-            self.Chat.verticalScrollBar().setValue(self.Chat.verticalScrollBar().maximum())
-        else:
-            self.Chat.verticalScrollBar().setValue(self.Chat.verticalScrollBar().maximum())
+    def on_chat_load_finished(self):
+        if self.data["messages"] != None:
+            for i in self.data["messages"]:
+                self.appendMSG(i)
+                links = self.find_image_links(i["text"])
+                if len(links) > 0:
+                    self.append_images_msg(links)
+
+    def appendMSG(self, msg):
+        self.lastmsg_by = msg
+        if msg["sender"] == self.cnt or (msg["sender"] == self.username and msg["receiver"] == self.cnt):
+            color = "red" if msg["sender"] == self.cnt else "blue"
+            js_code = f"""
+                i = {json.dumps(msg)};
+                div = document.createElement('div');
+                p = document.createElement('p');
+                p.style.color = '{color}';
+                p.style.fontSize = '11px';
+                p.textContent = i.sender;
+                div.appendChild(p);
+                br = document.createElement('br');
+                div.appendChild(br);
+                textNode = document.createTextNode(i.text);
+                div.appendChild(textNode);
+                div.appendChild(br);
+                document.getElementById('chat').appendChild(div);
+                window.scrollTo(0, document.body.scrollHeight);
+            """
+            self.Chat.page().runJavaScript(js_code)
+
     
     def SendMessage(self):
         with open("token.txt", "r") as file:
@@ -172,12 +216,7 @@ class MainApp(QtWidgets.QMainWindow):
 
     def AppendMessage(self, msg):
         self.lastmsg_by = msg
-        if msg["sender"] == self.cnt or (msg["sender"] == self.username and msg["receiver"] == self.cnt):
-            if msg["sender"] == self.cnt:
-                self.Chat.append(f'<div><p style="color:red;font-size:11;">{msg["sender"]}</p>\n{msg["text"]}<br></div>')
-            else:
-                self.Chat.append(f'<div><p style="color:blue;font-size:11;">{msg["sender"]}</p>\n{msg["text"]}<br></div>')
-
+        self.appendMSG(msg)
         if self.data["contacts"] == None:
             self.data["contacts"] = []
         if {"name":self.username, "contact":msg["sender"]} in self.data["contacts"] or msg["sender"] == self.username:

@@ -1,16 +1,22 @@
 # Эксперементальная функция с хентаем
 import sys
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets, QtCore, QtGui, QtWebEngineWidgets
 import requests
+
+class CustomWebEngineView(QtWebEngineWidgets.QWebEngineView):
+    def createWindow(self, type):
+        new_window = CustomWebEngineView()
+        new_window.show()  # Показываем новое окно
+        return new_window
 
 class Hentai(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
-        r = requests.get("http://hentasis1.top/982-iribitari-gal-ni-manko.html")
+        
         self.search = QtWidgets.QLineEdit()
         self.list = QtWidgets.QListWidget()
-        self.browser = QtWidgets.QTextBrowser()
-        self.browser.setText(r.text)
+        self.browser = CustomWebEngineView()
+        self.browser.setUrl(QtCore.QUrl("https://hentaimood.me/219057-boku-wa-kiwi-no-sayber-ya-tvoy-seyber.html"))
 
         self.l = QtWidgets.QHBoxLayout()
         self.l.addWidget(self.browser)
