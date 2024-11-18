@@ -1,3 +1,4 @@
 {
-    "addr": "localhost:8888"
+    "addr": "178.236.243.152:8888",
+    "proto": "http"
 }

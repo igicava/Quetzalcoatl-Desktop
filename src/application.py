@@ -19,6 +19,7 @@ class MainApp(QtWidgets.QMainWindow):
             style = s.read()
 
         self.lastmsg_by = {}
+        self.data={"messages":""}
 
         self.setStyleSheet(style)
         self.setWindowIcon(QtGui.QIcon("style/Quetzalcoatl.svg"))
@@ -125,7 +126,8 @@ class MainApp(QtWidgets.QMainWindow):
                 item.setIcon(QtGui.QIcon("style/user.svg"))
                 self.ListContact.addItem(item)
 
-        self.lastmsg_by = data["messages"][(len(data["messages"])-1)]
+        if data["messages"] != None:
+            self.lastmsg_by = data["messages"][(len(data["messages"])-1)]
 
         self.ListContact.itemClicked.connect(self.clickContactInList)
         self.PushMsg.clicked.connect(self.SendMessage)
@@ -535,7 +537,8 @@ if __name__ == "__main__":
     with open("server_config.json", "r") as file:
         cng = json.loads(file.read())
         ADDR=cng["addr"]
-        SERVER=f"http://{ADDR}"
+        PROTO=cng["proto"]
+        SERVER=f"{PROTO}://{ADDR}"
         WS_SERVER=f"ws://{ADDR}"
 
     app = QtWidgets.QApplication(sys.argv)
