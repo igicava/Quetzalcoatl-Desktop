@@ -25,6 +25,10 @@ QTextBrowser {
     background-color: #828282;
     border: none;
 }
+QWebEngineView {
+    background-color: #828282;
+    border: none;
+}
 QListWidget {
     background-color: #828282;
     border: none;

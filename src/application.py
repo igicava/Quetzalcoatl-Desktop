@@ -133,12 +133,31 @@ class MainApp(QtWidgets.QMainWindow):
         self.PushMsg.clicked.connect(self.SendMessage)
         # self.Chat.setText(json.dumps(data))
 
-    def find_image_links(self, text):
-        # Регулярное выражение для поиска ссылок на изображения
-        image_pattern = r'https?://'
+    def extract_links(self, text):
+        """
+        Извлекает ссылки из текста и возвращает их в виде списка.
         
-        # Находим все совпадения с регулярным выражением
-        image_links = re.findall(image_pattern, text, re.IGNORECASE)
+        :param text: строка, содержащая текст с возможными ссылками
+        :return: список ссылок
+        """
+        # Регулярное выражение для поиска URL
+        url_pattern = r'https?://[^\s]+'
+        # Находим все совпадения
+        links = re.findall(url_pattern, text)
+        return links
+    
+    def filter_image_links(self, links):
+        """
+        Фильтрует ссылки, указывающие на изображения, включая ссылки с параметрами.
+        
+        :param links: список ссылок
+        :return: список ссылок, ведущих на изображения
+        """
+        # Регулярное выражение для поиска файлов изображений с учетом параметров
+        image_pattern = r'\.(jpg|jpeg|png|gif|bmp|webp|tiff)(\?.*)?$'
+        
+        # Фильтруем ссылки, которые содержат расширения изображений
+        image_links = [link for link in links if re.search(image_pattern, link, re.IGNORECASE)]
         
         return image_links
     
@@ -146,7 +165,7 @@ class MainApp(QtWidgets.QMainWindow):
         for i in links:
             js_code = f"""
             i = {json.dumps(i)}
-            img = document.createElement('img');img.src = 'i';document.getElementById('chat').appendChild(img);
+            img = document.createElement('img');img.src = i;document.getElementById('chat').appendChild(img);
             window.scrollTo(0, window.outerHeight);
             """
             self.Chat.page().runJavaScript(js_code)
@@ -166,9 +185,7 @@ class MainApp(QtWidgets.QMainWindow):
         if self.data["messages"] != None:
             for i in self.data["messages"]:
                 self.appendMSG(i)
-                links = self.find_image_links(i["text"])
-                if len(links) > 0:
-                    self.append_images_msg(links)
+            
 
     def appendMSG(self, msg):
         self.lastmsg_by = msg
@@ -179,18 +196,23 @@ class MainApp(QtWidgets.QMainWindow):
                 div = document.createElement('div');
                 p = document.createElement('p');
                 p.style.color = '{color}';
-                p.style.fontSize = '11px';
+                p.style.fontSize = '20px';
                 p.textContent = i.sender;
                 div.appendChild(p);
                 br = document.createElement('br');
                 div.appendChild(br);
                 textNode = document.createTextNode(i.text);
+                div.style.fontSize = '20px';
                 div.appendChild(textNode);
                 div.appendChild(br);
                 document.getElementById('chat').appendChild(div);
                 window.scrollTo(0, document.body.scrollHeight);
             """
             self.Chat.page().runJavaScript(js_code)
+            links = self.extract_links(msg["text"])
+            links_img = self.filter_image_links(links)
+            if len(links_img) > 0:
+                self.append_images_msg(links_img)
 
     
     def SendMessage(self):
