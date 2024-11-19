@@ -509,11 +509,14 @@ class ChatService():
         print("Getting message", message)
         msg = json.loads(message)
         mp.AppendMessage(msg)
-        if msg["sender"] != global_username and mp.cnt != msg["sender"]:
+        with open("config.json", "r") as file:
+            data = json.loads(file.read())
+            username = data["username"]
+        if msg["sender"] != username and mp.cnt != msg["sender"]:
             plyer.notification.notify( 
                 message=f'{msg["text"]}',
                 app_name='Quetzalcoatl',
-                title='Новое сообщение', )
+                title=f'Новое сообщение от {msg["sender"]}', )
 
     def on_error(self, ws, error):
         print("WebSocket error:", error)
@@ -529,7 +532,10 @@ class ChatService():
 
 def RunWS():
     global service
-    service = ChatService(global_username)
+    with open("config.json", "r") as file:
+        data = json.loads(file.read())
+        username = data["username"]
+    service = ChatService(username)
     service.ws.run_forever()
 
 # Запуск приложения
