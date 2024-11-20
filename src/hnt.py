@@ -9,14 +9,16 @@ class CustomWebEngineView(QtWebEngineWidgets.QWebEngineView):
         new_window.show()  # Показываем новое окно
         return new_window
 
-class Hentai(QtWidgets.QWidget):
+class Hentai(QtWidgets.QDialog):
     def __init__(self):
         super().__init__()
         
+        self.setWindowIcon(QtGui.QIcon("style/Quetzalcoatl.svg"))
+        self.setWindowTitle("Quetzalcoatl")
         self.search = QtWidgets.QLineEdit()
         self.list = QtWidgets.QListWidget()
         self.browser = CustomWebEngineView()
-        self.browser.setUrl(QtCore.QUrl("https://hentaimood.me/219057-boku-wa-kiwi-no-sayber-ya-tvoy-seyber.html"))
+        self.browser.setUrl(QtCore.QUrl("https://hentaimood.me"))
 
         self.l = QtWidgets.QHBoxLayout()
         self.l.addWidget(self.browser)
@@ -24,9 +26,5 @@ class Hentai(QtWidgets.QWidget):
         self.setLayout(self.l)
         self.show()
 
-if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
-    w = Hentai()
-    sys.exit(app.exec_())
 
         
