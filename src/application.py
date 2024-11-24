@@ -42,7 +42,20 @@ class MainApp(QtWidgets.QMainWindow):
         self.Chat = QtWebEngineWidgets.QWebEngineView()
         self.Chat.loadFinished.connect(self.on_chat_load_finished)
         self.html = '''
-        <body id="chat"></body>
+        <html>
+        <head>
+            <style>
+                ::-webkit-scrollbar-thumb {
+                    background: #FF9800; /* Цвет ползунка */
+                    border-radius: 6px; /* Закругление углов */
+                }
+                ::-webkit-scrollbar-track {
+                    background: #2E2E2E; /* Цвет фона полосы прокрутки */
+                }
+            </style>
+        </head>
+        <body id="chat" style="background-color:#2E2E2E;color:white"></body>
+        </html>
         '''
         base_i = "let i;let div;let p;let br;let textNode"
         self.Chat.page().runJavaScript(base_i)
@@ -123,6 +136,12 @@ class MainApp(QtWidgets.QMainWindow):
         ac = ContactAddWindow()
         ac.exec_()
 
+    def checkActive(self):
+        if self.isActiveWindow():
+            return True
+        else:
+            return False
+
     def hnt(self):
         w = hnt.Hentai()
         w.exec_()
@@ -202,7 +221,7 @@ class MainApp(QtWidgets.QMainWindow):
                     self.appendMSG(self.data["messages"][i], True)
             except:
                 self.appendMSG(self.data["messages"][i], True)
-        QtCore.QTimer.singleShot(250, self.scroll_chat)
+        QtCore.QTimer.singleShot(350, self.scroll_chat)
             
 
     def appendMSG(self, msg, Last=True):
@@ -225,7 +244,6 @@ class MainApp(QtWidgets.QMainWindow):
                     p.textContent = i.sender;
                     div.appendChild(p);
                     br = document.createElement('br');
-                    div.appendChild(br);
                     textNode = document.createTextNode(i.text);
                     div.style.fontSize = '20px';
                     div.appendChild(textNode);
@@ -239,7 +257,6 @@ class MainApp(QtWidgets.QMainWindow):
                     i = {json.dumps(msg)};
                     div = document.createElement('div');
                     br = document.createElement('br');
-                    div.appendChild(br);
                     textNode = document.createTextNode(i.text);
                     div.style.fontSize = '20px';
                     div.appendChild(textNode);

@@ -5,3 +5,4 @@ token.txt
 build
 dist
 application.spec
+.gitignore

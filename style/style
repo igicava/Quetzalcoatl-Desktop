@@ -15,23 +15,26 @@ QLabel {
     color: white;
 }
 QMenuBar {
-    background-color: #828282;
+    background-color: #2E2E2E;
+    color: white;
+}
+QMenuBar::item {
+    background: transparent; /* Прозрачный фон для элементов меню */
 }
 QTextEdit {
-    background-color: #828282;
+    background-color: #2E2E2E;
     border: none;
-}
-QTextBrowser {
-    background-color: #828282;
-    border: none;
+    color: white;
+    border: 4px solid white;
 }
 QWebEngineView {
-    background-color: #828282;
-    border: none;
+    border: 4px solid white;
 }
 QListWidget {
-    background-color: #828282;
+    background-color: #2E2E2E;
     border: none;
+    color: white;
+    border: 4px solid white;
 }
                     
             
