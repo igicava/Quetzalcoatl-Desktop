@@ -2,7 +2,4 @@
 config.json
 src/__pycache__/
 token.txt
-build
-dist
-application.spec
-.gitignore
+main.exe
