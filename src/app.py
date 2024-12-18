@@ -1,9 +1,8 @@
 import re
 import json
 import requests
-from PyQt5 import QtCore, QtWidgets, QtGui, QtWebEngineWidgets
+from PySide6 import QtCore, QtWidgets, QtGui, QtWebEngineWidgets
 import cnt
-import hnt
 import mdl
 
 class MainApp(QtWidgets.QMainWindow):
@@ -61,24 +60,18 @@ class MainApp(QtWidgets.QMainWindow):
         self.menu.setObjectName("menu")
         self.menu_2 = QtWidgets.QMenu(self.menubar)
         self.menu_2.setObjectName("menu_2")
-        self.menu_3 = QtWidgets.QMenu(self.menubar)
-        self.menu_3.setObjectName("menu_3")
         self.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar()
         self.statusbar.setObjectName("statusbar")
         self.setStatusBar(self.statusbar)
-        self.action = QtWidgets.QAction()
+        self.action = QtGui.QAction()
         self.action.setObjectName("action")
-        self.action_2 = QtWidgets.QAction()
+        self.action_2 = QtGui.QAction()
         self.action_2.setObjectName("action_2")
-        self.action_3 = QtWidgets.QAction()
-        self.setObjectName("action_3")
         self.menu.addAction(self.action)
         self.menu.addAction(self.action_2)
-        self.menu_3.addAction(self.action_3)
         self.menubar.addAction(self.menu.menuAction())
         self.menubar.addAction(self.menu_2.menuAction())
-        self.menubar.addAction(self.menu_3.menuAction())
 
         self.retranslateUi()
         QtCore.QMetaObject.connectSlotsByName(self)
@@ -104,9 +97,7 @@ class MainApp(QtWidgets.QMainWindow):
         bl.addLayout(ChatAndSendLayout)
 
         self.action.triggered.connect(self.AddContact)
-        self.action_3.triggered.connect(self.hnt)
         self.addAction(self.action)
-        self.addAction(self.action_3)
 
         central_widget.setLayout(bl)
 
@@ -118,16 +109,10 @@ class MainApp(QtWidgets.QMainWindow):
         self.menu_2.setTitle(_translate("MainWindow", "Справка"))
         self.action.setText(_translate("MainWindow", "Добавить контакт"))
         self.action_2.setText(_translate("MainWindow", "Выйти"))
-        self.menu_3.setTitle(_translate("MainWindow", "Экспирементальные функции"))
-        self.action_3.setText(_translate("MainWindow", "Хентай манга и додзинси"))
 
     def AddContact(self):
         ac = cnt.ContactAddWindow()
         ac.exec_()
-
-    def hnt(self):
-        w = hnt.Hentai()
-        w.exec_()
     
     def Run(self, data, us):
         self.show()
@@ -208,11 +193,19 @@ class MainApp(QtWidgets.QMainWindow):
             """
             self.Chat.page().runJavaScript(js_code)
 
+    def handle_js_result(self, result):
+        if isinstance(result, Exception):
+            print(f"JavaScript ошибка: {result}")
+        else:
+            print(f"Результат выполнения JavaScript: {result}")
+
     def appendMSG(self, msg):
+        print("Начало работы с чатом...")
         self.lastmsg_by = msg
         if msg["sender"] == self.cnt or (msg["sender"] == self.username and msg["receiver"] == self.cnt):
             color = "red" if msg["sender"] == self.cnt else "blue"
-            js_code = f"""
+            try:
+                js_code = f"""
                 i = {json.dumps(msg)};
                 div = document.createElement('div');
                 p = document.createElement('p');
@@ -228,12 +221,18 @@ class MainApp(QtWidgets.QMainWindow):
                 div.appendChild(br);
                 document.getElementById('chat').appendChild(div);
                 window.scrollTo(0, document.body.scrollHeight);
-            """
-            self.Chat.page().runJavaScript(js_code)
+                """
+                print("Исполнение js...")
+                self.Chat.page().runJavaScript(js_code, self.handle_js_result)
+            except Exception as e:
+                print(f"Произошла ошибка: {e}")
+
+            print("js выполнен...")
             links = self.extract_links(msg["text"])
             links_img = self.filter_image_links(links)
             if len(links_img) > 0:
                 self.append_images_msg(links_img)
+            print("Действия с чатом завершены...")
     
     def SendMessage(self):
         with open("token.txt", "r") as file:
@@ -249,7 +248,7 @@ class MainApp(QtWidgets.QMainWindow):
             r = requests.post(f"{mdl.SERVER}/getmsg", json=q)
             if r.status_code == 200:
                 print("Congratulations!!!")
-                mdl.service.send_message(q)
+                mdl.service_ws.send_message(q)
             else:
                 print("error get msg")
 
@@ -259,6 +258,7 @@ class MainApp(QtWidgets.QMainWindow):
             self.SendMessage()
 
     def AppendMessage(self, msg):
+        print("работа с контактами...")
         self.lastmsg_by = msg
         self.appendMSG(msg)
         if self.data["contacts"] == None:
@@ -270,6 +270,8 @@ class MainApp(QtWidgets.QMainWindow):
             item = QtWidgets.QListWidgetItem(msg["sender"])  
             item.setIcon(QtGui.QIcon("style/user.svg"))
             self.ListContact.addItem(item)
+
+        print("Работа с контактами завершена")
 
         if self.data["messages"] == None:
             self.data["messages"] = []

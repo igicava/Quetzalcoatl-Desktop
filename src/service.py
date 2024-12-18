@@ -2,9 +2,14 @@ import json
 import websocket
 import plyer
 import mdl
+from PySide6.QtCore import Signal, QObject
 
-class ChatService():
+class ChatService(QObject):
+
+    message_received = Signal(dict)
+
     def __init__(self, username):
+        super().__init__()
         with open("token.txt", "r") as file:
             tokenF = file.read()
 
@@ -20,7 +25,8 @@ class ChatService():
     def on_message(self, ws, message):
         print("Getting message", message)
         msg = json.loads(message)
-        mdl.mp.AppendMessage(msg)
+        self.message_received.emit(msg)
+        print("Добавлено в основной поток")
         with open("config.json", "r") as file:
             data = json.loads(file.read())
             username = data["username"]

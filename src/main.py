@@ -2,9 +2,7 @@
 import sys
 import requests
 import json
-import websocket
 import threading
-from PyQt5 import QtCore, QtWidgets, QtGui, QtWebEngineWidgets
 import mdl
 import log_reg
 
@@ -58,4 +56,4 @@ if __name__ == "__main__":
         regForm = log_reg.LoginRegisterWindow()
         regForm.Run()
 
-    sys.exit(mdl.application.exec_())
+    sys.exit(mdl.application.exec())

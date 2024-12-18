@@ -1,7 +1,7 @@
 import app
 import json
 import sys
-from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets
+from PySide6 import QtCore, QtWidgets, QtWebEngineWidgets
 import service
 
 class NewKeysTextEdit(QtWidgets.QTextEdit):
@@ -27,9 +27,10 @@ global mp
 mp = app.MainApp()
 
 def RunWS():
-    global service
+    global service_ws
     with open("config.json", "r") as file:
         data = json.loads(file.read())
         username = data["username"]
-    service = service.ChatService(username)
-    service.ws.run_forever()
+    service_ws = service.ChatService(username)
+    service_ws.message_received.connect(mp.AppendMessage)
+    service_ws.ws.run_forever()

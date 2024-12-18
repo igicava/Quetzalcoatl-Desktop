@@ -1,5 +1,5 @@
 import requests
-from PyQt5 import QtWidgets, QtGui
+from PySide6 import QtWidgets, QtGui
 import mdl
 
 class ContactAddWindow(QtWidgets.QDialog):

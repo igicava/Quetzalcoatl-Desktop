@@ -1,6 +1,6 @@
 import threading
 import json
-from PyQt5 import QtWidgets, QtGui
+from PySide6 import QtWidgets, QtGui
 import requests
 import mdl
 
